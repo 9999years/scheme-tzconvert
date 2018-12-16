@@ -20,15 +20,16 @@
     #:program "tzconvert"
     #:argv argv
     #:args (time from-zone to-zone)
-    (values time from-zone to-zone))))
+    (list time from-zone to-zone))))
+
+(define parse-and-zone
+  (λ (time from-zone to-zone)
+    (list (zone-time (string->time time) from-zone) to-zone)))
 
 ; '("10:00AM" "America/Los_Angeles" "America/New_York")
 
 (module* main #f
-  (let* ([argv (current-command-line-arguments)])
-    (let-values ([(time from-zone to-zone) (time-and-zones argv)])
-      (let* ([time (string->time time)]
-             [time (zone-time time from-zone)]
-             [time (convert-time time to-zone)])
-        (print (~t time "h:mm a"))))))
+  (let* ([argv (current-command-line-arguments)]
+         [time (apply convert-time (apply parse-and-zone (time-and-zones argv)))])
+    (display (~t time "h:mm a"))))
 
