@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 (require racket/cmdline)
 (require gregor)
@@ -26,11 +26,9 @@
 
 
 (module+ test
-  (check-moment= (convert-time (zone-time
-                                (time 1 14)
-                                "America/Los_Angeles")
-                               "EST")
-                 (moment 1970 1 1 4 14 #:tz "EST")))
+  (let ([t1 (zone-time (time 1 14) "America/Los_Angeles")]
+        [expected (moment 1970 1 1 4 14 #:tz "EST")])
+    (check-moment= (convert-time t1 "EST") expected)))
 ;;; Changes the timezone on `time` to `new-tz` and shifts it to convert from
 ;;; one time to another
 (define (convert-time time new-tz)
@@ -38,8 +36,6 @@
     (zone-time (-seconds time seconds) new-tz)))
 
 ; CLI interface:
-
-; (argv '("10:00AM" "America/Los_Angeles" "America/New_York"))
 (define argv          (make-parameter (current-command-line-arguments)))
 (define arg-time      (make-parameter now/moment))
 (define arg-from-zone (make-parameter "UTC"))
@@ -57,12 +53,19 @@
     (arg-from-zone from-zone)
     (arg-to-zone to-zone))))
 
-(module+ main
-  (argv '("10:00AM" "America/Los_Angeles" "America/New_York"))
-  (time-and-zones! (argv))
-  (let* ([time (string->time (arg-time))]
-         [time (zone-time time (arg-from-zone))]
-         [time (convert-time time (arg-to-zone))]
-         [time (~t time "h:mm a")])
-    (display time)))
+;;; parses a time from a string and converts it from from-zone to to-zone
+(define (parse-and-convert time from-zone to-zone)
+  (convert-time (zone-time (string->time time)
+                           from-zone)
+                to-zone))
 
+(define (time->string time)
+  (~t time "h:mm a"))
+
+(module+ main
+  ; (argv '("10:00AM" "America/Los_Angeles" "America/New_York"))
+  (time-and-zones! (argv))
+  (display (time->string (parse-and-convert
+                          (arg-time)
+                          (arg-from-zone)
+                          (arg-to-zone)))))
